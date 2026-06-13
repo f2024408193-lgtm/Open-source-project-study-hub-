@@ -1,0 +1,7 @@
+# StudyHub uses only the Python standard library.
+# tkinter and sqlite3 ship with Python — no pip installs are required.
+#
+# If "import tkinter" fails on Linux, install it with your package manager:
+#   Debian/Ubuntu:  sudo apt-get install python3-tk
+#   Fedora:         sudo dnf install python3-tkinter
+#   macOS (brew):   brew install python-tk
