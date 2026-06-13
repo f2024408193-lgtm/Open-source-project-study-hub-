@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# StudyHub local database (do not commit user data)
+studyhub.db
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
