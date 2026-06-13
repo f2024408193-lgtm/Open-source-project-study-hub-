@@ -106,3 +106,4 @@ Foreign keys link tasks and notes to their owning user, so deleting a user casca
 
 ---
 *Built for educational purposes as part of the OSSD course.*
+# Open-source-project-study-hub-
