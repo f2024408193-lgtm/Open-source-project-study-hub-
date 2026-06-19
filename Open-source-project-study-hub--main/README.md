@@ -81,7 +81,7 @@ studyhub/
 | Member C | Task Manager | `screens/tasks.py` | `feature/tasks` |
 | Member D | Notes | `screens/notes.py` | `feature/notes` |
 | Member E | Stats & Database | `screens/stats.py`, `db.py` | `feature/stats-db` |
-| Member F | Documentation and Testing and Quality assurance| `reature/doc-testing`
+| Member F | Documentation and Testing and Quality assurance| `feature/doc-testing`
 > Replace "Member A–F" with real names + GitHub handles before submitting.
 
 ## 🔗 Major PRs & Issues
