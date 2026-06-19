@@ -1,97 +1,126 @@
-"""
-tasks.py — Documentation 
-Owned by: Member F (Testing )
-
+tasks.py —
+Documentation and tests for the Task Manager module.
+Owned by: Member F (Testing)
 
 
 import unittest
 import sqlite3
 import os
-import hashlib
-# Assuming db.py contains your database operations
-import db 
+import db
+
 
 class TestStudyHubDatabase(unittest.TestCase):
-    
+
     def setUp(self):
-        """
-        Runs before EVERY test. Sets up an isolated test database 
-        environment so production data isn't modified.
-        """
-        self.test_db_filename = "test_studyhub.db"
-        # Force db module to point to the test database if your db.py allows configuration,
-        # or mock the sqlite3.connect inside db.py if necessary.
-        db.DB_NAME = self.test_db_filename 
-        
-        # Initialize tables for clean slate testing
-        db.init_db() 
+        if os.path.exists(db.DB_PATH):
+            os.remove(db.DB_PATH)
+
+        db.init_db()
 
     def tearDown(self):
-        """
-        Runs after EVERY test. Cleans up the database file to prevent
-        cross-test pollution.
-        """
-        if os.path.exists(self.test_db_filename):
-            try:
-                os.remove(self.test_db_filename)
-            except PermissionError:
-                pass # Handle file locks smoothly
+        if os.path.exists(db.DB_PATH):
+            os.remove(db.DB_PATH)
 
     def test_user_authentication_flow(self):
-        """Verifies account creation, password hashing, and login validation."""
+
         username = "qa_tester"
         password = "SecurePassword123!"
-        
-        # 1. Test successful registration
-        reg_result = db.create_user(username, password)
-        self.assertTrue(reg_result, "User registration failed under normal conditions.")
-        
-        # 2. Test duplicate registration prevention
-        duplicate_result = db.create_user(username, "anotherPassword")
-        self.assertFalse(duplicate_result, "Database allowed a duplicate username to be registered.")
-        
-        # 3. Test successful login validation
-        login_success = db.validate_login(username, password)
-        self.assertTrue(login_success, "Valid login credentials were rejected.")
-        
-        # 4. Test login failure with incorrect password
-        login_wrong_pass = db.validate_login(username, "WrongPassword")
-        self.assertFalse(login_wrong_pass, "Database accepted an invalid password.")
+
+        ok, _ = db.register_user(username, password)
+        self.assertTrue(ok)
+
+        ok, _ = db.register_user(username, "anotherPassword")
+        self.assertFalse(ok)
+
+        user_id = db.login_user(username, password)
+        self.assertIsNotNone(user_id)
+
+        wrong_login = db.login_user(username, "WrongPassword")
+        self.assertIsNone(wrong_login)
 
     def test_task_management_crud(self):
-        """Tests Create, Read, Update, and Delete actions for the Task module."""
-        # Setup a dummy user to own the tasks
-        db.create_user("task_user", "pass")
-        user_id = 1 # Assuming autoincrement starts at 1
-        
-        # 1. Test creating a task
-        task_id = db.add_task(user_id, "Complete OSSD Project", "2026-06-25")
-        self.assertIsNotNone(task_id, "Failed to insert task into database.")
-        
-        # 2. Test fetching user tasks
+
+        ok, _ = db.register_user("task_user", "pass")
+        self.assertTrue(ok)
+
+        user_id = db.login_user("task_user", "pass")
+
+        db.add_task(
+            user_id,
+            "Complete OSSD Project",
+            "2026-06-25"
+        )
+
         tasks = db.get_tasks(user_id)
-        self.assertEqual(len(tasks), 1, "Task list count does not match expected value.")
-        self.assertEqual(tasks[0]['title'], "Complete OSSD Project")
-        
-        # 3. Test updating a task (Marking as Completed)
-        update_success = db.toggle_task_status(task_id, is_done=True)
-        self.assertTrue(update_success)
-        
-        updated_tasks = db.get_tasks(user_id)
-        self.assertTrue(updated_tasks[0]['done'], "Task status was not successfully updated to Done.")
+
+        self.assertEqual(len(tasks), 1)
+        self.assertEqual(
+            tasks[0]["title"],
+            "Complete OSSD Project"
+        )
+
+        task_id = tasks[0]["id"]
+
+        db.toggle_task(task_id)
+
+        tasks = db.get_tasks(user_id)
+
+        self.assertEqual(tasks[0]["done"], 1)
+
+        db.delete_task(task_id)
+
+        tasks = db.get_tasks(user_id)
+
+        self.assertEqual(len(tasks), 0)
 
     def test_sql_injection_resilience(self):
-        """Ensures the application handles malicious input safely via parameterized queries."""
-        malicious_username = "malicious_user' OR '1'='1"
-        malicious_password = "any_password"
-        
-        # Attempt to register with dangerous strings
-        reg_success = db.create_user(malicious_username, malicious_password)
-        self.assertTrue(reg_success, "Database crashed or rejected handling SQL strings safely.")
-        
-        # Verify it treats the input strictly as literal text, not executable SQL
-        login_check = db.validate_login("legit_user", malicious_username)
-        self.assertFalse(login_check, "SQL Injection vulnerability detected in login verification.")
+
+        malicious_username = "admin' OR '1'='1"
+
+        ok, _ = db.register_user(
+            malicious_username,
+            "password"
+        )
+
+        self.assertTrue(ok)
+
+        login = db.login_user(
+            "nonexistent",
+            malicious_username
+        )
+
+        self.assertIsNone(login)
+
+    def test_stats(self):
+
+        ok, _ = db.register_user("stats_user", "pass")
+        self.assertTrue(ok)
+
+        user_id = db.login_user(
+            "stats_user",
+            "pass"
+        )
+
+        db.add_task(user_id, "Task 1", "2026-01-01")
+        db.add_task(user_id, "Task 2", "2026-01-02")
+
+        tasks = db.get_tasks(user_id)
+
+        db.toggle_task(tasks[0]["id"])
+
+        db.add_note(
+            user_id,
+            "Note 1",
+            "Test note"
+        )
+
+        stats = db.get_stats(user_id)
+
+        self.assertEqual(stats["tasks_total"], 2)
+        self.assertEqual(stats["tasks_done"], 1)
+        self.assertEqual(stats["tasks_pending"], 1)
+        self.assertEqual(stats["notes_total"], 1)
+
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)
